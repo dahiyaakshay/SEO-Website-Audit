@@ -1,6 +1,6 @@
 Website Analyzer
 An open-source, AI-powered website analysis tool that evaluates SEO, performance, content quality, accessibility, and more. Built with Streamlit and Together.ai.
-Show Image
+
 Features
 
 SEO Analysis: Meta tags, headings, keywords, and content structure
