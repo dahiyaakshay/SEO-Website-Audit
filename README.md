@@ -96,6 +96,7 @@ project_root/
     ├── __init__.py
     └── test_analyzers.py     # Unit tests
 
+
 --> Extending the Project
 
 -> Adding New Analyzers
