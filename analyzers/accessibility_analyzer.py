@@ -791,9 +791,10 @@ class AccessibilityAnalyzer:
             "description": f"All {len(data_tables)} data tables have proper headers, but {len(tables_without_captions)} are missing captions."
         }
     
-    def calculate_accessibility_score(self, findings):
+def calculate_accessibility_score(self, findings):
     """Calculate overall accessibility score based on categorized findings"""
 
+    # Define weights for different categories
     weights = {
         "Structure": 0.25,
         "Content": 0.25,
@@ -801,23 +802,38 @@ class AccessibilityAnalyzer:
         "Media": 0.25
     }
 
+    # Calculate scores for each category
     category_scores = {}
 
     for category, items in findings.items():
+        if not items:
+            category_scores[category] = 50  # Default score for empty categories
+            continue
+
+        # Count types
         type_counts = {"success": 0, "warning": 0, "error": 0}
         for item in items:
-            if item.get("type") in type_counts:
+            if "type" in item and item["type"] in type_counts:
                 type_counts[item["type"]] += 1
 
         total_items = sum(type_counts.values())
         if total_items == 0:
             category_scores[category] = 50
         else:
-            category_scores[category] = (
-                (type_counts["success"] * 100 + type_counts["warning"] * 50) / total_items
-            )
+            category_score = (
+                type_counts["success"] * 100 +
+                type_counts["warning"] * 50 +
+                type_counts["error"] * 0
+            ) / total_items
+            category_scores[category] = category_score
+
+    total_weight = sum(weights.get(category, 0) for category in category_scores.keys())
+    if total_weight == 0:
+        return 50
 
     weighted_sum = sum(
-        category_scores.get(cat, 50) * weights.get(cat, 0.25) for cat in weights
+        category_scores[category] * weights.get(category, 0)
+        for category in category_scores.keys()
     )
-    return round(weighted_sum)
+
+    return round(weighted_sum / total_weight)
