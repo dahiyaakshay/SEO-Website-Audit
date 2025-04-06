@@ -70,7 +70,7 @@ class AccessibilityAnalyzer:
         findings["Content"].append(tables_result)
         
         # Calculate score
-        score = self._calculate_score(findings)
+        score = self.calculate_accessibility_score(findings)
         
         # Generate recommendations
         recommendations = self._generate_recommendations(findings)
@@ -791,7 +791,7 @@ class AccessibilityAnalyzer:
             "description": f"All {len(data_tables)} data tables have proper headers, but {len(tables_without_captions)} are missing captions."
         }
     
-def _calculate_score(self, findings):
+def calculate_accessibility_score(self, findings):
     """Calculate overall accessibility score based on findings"""
     
     # Define weights for different categories
