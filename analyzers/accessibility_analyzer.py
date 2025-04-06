@@ -791,11 +791,33 @@ class AccessibilityAnalyzer:
             "description": f"All {len(data_tables)} data tables have proper headers, but {len(tables_without_captions)} are missing captions."
         }
     
-    def _calculate_score(self, findings):
-        """Calculate overall accessibility score based on findings"""
-        
-        # Define weights for different categories
-        weights = {
-            "Structure": 0.25,
-            "Content": 0.25,
-            "Navigation": 0
+    def calculate_accessibility_score(self, findings):
+    """Calculate overall accessibility score based on categorized findings"""
+
+    weights = {
+        "Structure": 0.25,
+        "Content": 0.25,
+        "Navigation": 0.25,
+        "Media": 0.25
+    }
+
+    category_scores = {}
+
+    for category, items in findings.items():
+        type_counts = {"success": 0, "warning": 0, "error": 0}
+        for item in items:
+            if item.get("type") in type_counts:
+                type_counts[item["type"]] += 1
+
+        total_items = sum(type_counts.values())
+        if total_items == 0:
+            category_scores[category] = 50
+        else:
+            category_scores[category] = (
+                (type_counts["success"] * 100 + type_counts["warning"] * 50) / total_items
+            )
+
+    weighted_sum = sum(
+        category_scores.get(cat, 50) * weights.get(cat, 0.25) for cat in weights
+    )
+    return round(weighted_sum)
