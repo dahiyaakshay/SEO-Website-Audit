@@ -844,5 +844,3 @@ class AccessibilityAnalyzer:
         if total_checks == 0:
             return 100
         return max(0, round((1 - issues_found / total_checks) * 100))
-
-print("Methods available:", dir(self))
