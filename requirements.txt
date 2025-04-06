@@ -16,3 +16,7 @@ markdown==3.5.2
 
 # For security checks
 cryptography==42.0.1
+
+# Optional but useful
+lxml==5.1.0     # for faster/better HTML parsing with BeautifulSoup
+html5lib==1.1   # fallback parser
