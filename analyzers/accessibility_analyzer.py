@@ -838,6 +838,9 @@ def calculate_accessibility_score(self, findings):
 
     return round(weighted_sum / total_weight)
 
+   class AccessibilityAnalyzer:
+    # Other methods
+
     def _calculate_score(self, issues_found, total_checks):
         if total_checks == 0:
             return 100
