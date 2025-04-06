@@ -789,3 +789,4 @@ class SEOAnalyzer:
             return finding.get("description", "Fix this critical SEO issue to improve your search engine rankings.")
         else:
             return finding.get("description", "Address this issue to enhance your SEO performance.")
+
