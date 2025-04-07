@@ -46,10 +46,31 @@ class ReportGenerator:
             ai_recommendations = self.results["AI Insights"].get("recommendations", [])
             if ai_recommendations:
                 # Combine AI recommendations with other high priority recommendations
-                ai_recs = [{"category": "AI Insights", "priority": rec["priority"], 
-                            "title": rec["title"],
-                            "recommendation": rec["description"]} 
-                           for rec in ai_recommendations if rec["priority"] == "High"]
+                ai_recs = []
+                for rec in ai_recommendations:
+                    # Handle type conversion for priority
+                    priority = rec.get("priority", "Medium")
+                    if isinstance(priority, dict):
+                        priority = "Medium"
+                    elif not isinstance(priority, str):
+                        priority = str(priority)
+                    
+                    # Only include high priority recommendations
+                    if priority == "High":
+                        description = rec.get("description", "")
+                        if isinstance(description, dict):
+                            description = str(description)
+                            
+                        title = rec.get("title", "Recommendation")
+                        if isinstance(title, dict):
+                            title = str(title)
+                            
+                        ai_recs.append({
+                            "category": "AI Insights", 
+                            "priority": priority, 
+                            "title": title,
+                            "recommendation": description
+                        })
                 
                 other_top_recs = [rec for rec in top_recommendations if rec["category"] != "AI Insights"]
                 
@@ -76,6 +97,9 @@ class ReportGenerator:
         if self.ai_enabled and "AI Insights" in self.results:
             ai_summary = self.results["AI Insights"].get("summary", None)
             if ai_summary:
+                if isinstance(ai_summary, dict):
+                    # Convert dict to string if needed
+                    return str(ai_summary)
                 return ai_summary
         
         # Calculate overall scores
@@ -95,11 +119,15 @@ class ReportGenerator:
             findings = data.get("findings", {})
             for section in findings.values():
                 for item in section:
-                    if item.get("type") == "error":
+                    item_type = item.get("type", "")
+                    if isinstance(item_type, dict):
+                        item_type = "warning"  # Default if it's a dictionary
+                    
+                    if item_type == "error":
                         errors += 1
-                    elif item.get("type") == "warning":
+                    elif item_type == "warning":
                         warnings += 1
-                    elif item.get("type") == "success":
+                    elif item_type == "success":
                         successes += 1
         
         # Generate summary text
@@ -240,13 +268,29 @@ class ReportGenerator:
             findings = data.get("findings", {})
             for section, items in findings.items():
                 for item in items:
-                    if item.get("type") in ["error", "warning"]:
+                    # Handle type checking
+                    item_type = item.get("type", "")
+                    if isinstance(item_type, dict):
+                        item_type = "warning"
+                    elif not isinstance(item_type, str):
+                        item_type = str(item_type)
+                        
+                    if item_type in ["error", "warning"]:
+                        # Process item fields to ensure they're strings
+                        title = item.get("title", "")
+                        if isinstance(title, dict):
+                            title = str(title)
+                            
+                        description = item.get("description", "")
+                        if isinstance(description, dict):
+                            description = str(description)
+                            
                         key_findings.append({
                             "category": category,
                             "section": section,
-                            "type": item.get("type"),
-                            "title": item.get("title"),
-                            "description": item.get("description")
+                            "type": item_type,
+                            "title": title,
+                            "description": description
                         })
                         
                         # Limit to most important findings to avoid token limits
@@ -264,18 +308,33 @@ class ReportGenerator:
         for category, data in self.results.items():
             recommendations = data.get("recommendations", [])
             for rec in recommendations:
+                # Handle type conversion for various fields
+                priority = rec.get("priority", "Medium")
+                if isinstance(priority, dict):
+                    priority = "Medium"
+                elif not isinstance(priority, str):
+                    priority = str(priority)
+                
+                title = rec.get("title", "")
+                if isinstance(title, dict):
+                    title = str(title)
+                
+                description = rec.get("description", "")
+                if isinstance(description, dict):
+                    description = str(description)
+                
                 all_recommendations.append({
                     "category": category,
-                    "priority": rec.get("priority", "Medium"),
-                    "title": rec.get("title", ""),
-                    "recommendation": rec.get("description", "")
+                    "priority": priority,
+                    "title": title,
+                    "recommendation": description
                 })
         
         # Sort by priority (High > Medium > Low)
         priority_order = {"High": 0, "Medium": 1, "Low": 2}
         sorted_recommendations = sorted(
             all_recommendations, 
-            key=lambda x: priority_order.get(x.get("priority"), 3)
+            key=lambda x: priority_order.get(x.get("priority", "Medium"), 3)
         )
         
         # Return top 5 recommendations
@@ -283,6 +342,26 @@ class ReportGenerator:
     
     def _generate_detailed_html(self):
         """Generate a detailed HTML report"""
+        # Create a custom filter for Jinja2 to handle type issues
+        def safe_string(value):
+            """Convert any value to a string safely"""
+            if value is None:
+                return ""
+            if isinstance(value, dict):
+                return str(value)
+            return str(value)
+        
+        def safe_lower(value):
+            """Convert value to lowercase safely"""
+            if value is None:
+                return ""
+            if isinstance(value, dict):
+                return "medium"  # Default for dictionaries
+            try:
+                return str(value).lower()
+            except:
+                return "medium"  # Fallback
+        
         # HTML template for the report
         template_str = """
         <!DOCTYPE html>
@@ -395,11 +474,11 @@ class ReportGenerator:
             <h2>Top Recommendations</h2>
             <div class="recommendations">
                 {% for rec in top_recommendations %}
-                <div class="recommendation {{ rec.priority | lower }}-priority">
-                    <h3>{{ rec.title }}</h3>
-                    <p><strong>Category:</strong> {{ rec.category }}</p>
-                    <p><strong>Priority:</strong> {{ rec.priority }}</p>
-                    <p>{{ rec.recommendation }}</p>
+                <div class="recommendation {{ safe_lower(rec.priority) }}-priority">
+                    <h3>{{ safe_string(rec.title) }}</h3>
+                    <p><strong>Category:</strong> {{ safe_string(rec.category) }}</p>
+                    <p><strong>Priority:</strong> {{ safe_string(rec.priority) }}</p>
+                    <p>{{ safe_string(rec.recommendation) }}</p>
                 </div>
                 {% endfor %}
             </div>
@@ -413,11 +492,11 @@ class ReportGenerator:
                 <h3>{{ section }}</h3>
                 
                 {% for item in items %}
-                <div class="finding finding-{{ item.type }}">
-                    <h4>{{ item.title }}</h4>
-                    <p>{{ item.description }}</p>
+                <div class="finding finding-{{ safe_lower(item.type) }}">
+                    <h4>{{ safe_string(item.title) }}</h4>
+                    <p>{{ safe_string(item.description) }}</p>
                     {% if item.details %}
-                    <pre>{{ item.details }}</pre>
+                    <pre>{{ safe_string(item.details) }}</pre>
                     {% endif %}
                 </div>
                 {% endfor %}
@@ -427,24 +506,52 @@ class ReportGenerator:
             {% endfor %}
             
             <div class="footer">
-                <p>Generated by Website Analyzer - A Web Gremlin Alternative</p>
+                <p>Generated by Website Analyzer</p>
             </div>
         </body>
         </html>
         """
         
-        # Create template and render
+        # Create template with custom filters
         template = Template(template_str)
+        template.globals['safe_string'] = safe_string
+        template.globals['safe_lower'] = safe_lower
         
-        # Convert markdown summary to HTML
-        summary_html = markdown.markdown(self._generate_summary())
-        
-        # Render the template
-        html_report = template.render(
-            results=self.results,
-            summary_html=summary_html,
-            top_recommendations=self._extract_top_recommendations(),
-            timestamp=self.timestamp
-        )
-        
-        return html_report
+        try:
+            # Convert markdown summary to HTML
+            summary_html = markdown.markdown(self._generate_summary())
+            
+            # Process recommendations to ensure no dictionary values
+            safe_recommendations = []
+            for rec in self._extract_top_recommendations():
+                safe_rec = {}
+                for key, value in rec.items():
+                    if isinstance(value, dict):
+                        safe_rec[key] = str(value)
+                    else:
+                        safe_rec[key] = value
+                safe_recommendations.append(safe_rec)
+            
+            # Render the template
+            html_report = template.render(
+                results=self.results,
+                summary_html=summary_html,
+                top_recommendations=safe_recommendations,
+                timestamp=self.timestamp
+            )
+            
+            return html_report
+        except Exception as e:
+            logger.error(f"Error generating HTML report: {str(e)}")
+            # Return a simple error report if HTML generation fails
+            return f"""
+            <!DOCTYPE html>
+            <html>
+            <head><title>Error Generating Report</title></head>
+            <body>
+                <h1>Error Generating Detailed Report</h1>
+                <p>There was an error generating the detailed HTML report: {str(e)}</p>
+                <p>Please check the summary tab for key findings and recommendations.</p>
+            </body>
+            </html>
+            """
