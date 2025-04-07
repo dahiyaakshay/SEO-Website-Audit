@@ -752,3 +752,174 @@ class DesignAnalyzer:
         # Check for important footer elements
         footer_links = footer.find_all('a')
         footer_link_count = len(footer_links)
+
+ # Check for important footer elements
+        has_contact = any('contact' in link.get_text().lower() for link in footer_links)
+        has_privacy = any('privacy' in link.get_text().lower() for link in footer_links)
+        has_terms = any(term in ' '.join(link.get_text().lower() for link in footer_links) for term in ['terms', 'conditions'])
+        
+        # Check for social media links
+        social_patterns = ['facebook', 'twitter', 'instagram', 'linkedin', 'youtube', 'pinterest', 'tiktok']
+        social_links = [link for link in footer_links if any(pattern in link.get('href', '').lower() for pattern in social_patterns)]
+        has_social = len(social_links) > 0
+        
+        # Check for copyright information
+        copyright_text = footer.find(string=lambda text: text and '©' in text or 'copyright' in text.lower())
+        has_copyright = copyright_text is not None
+        
+        # Build finding based on results
+        present_elements = []
+        if has_contact:
+            present_elements.append("contact information")
+        if has_privacy:
+            present_elements.append("privacy policy")
+        if has_terms:
+            present_elements.append("terms of service")
+        if has_social:
+            present_elements.append(f"{len(social_links)} social media links")
+        if has_copyright:
+            present_elements.append("copyright notice")
+        
+        if len(present_elements) >= 4:
+            return {
+                "type": "success",
+                "title": "Comprehensive footer",
+                "description": f"The footer contains {footer_link_count} links and includes " + ", ".join(present_elements) + "."
+            }
+        elif len(present_elements) >= 2:
+            return {
+                "type": "success",
+                "title": "Good footer elements",
+                "description": f"The footer includes " + ", ".join(present_elements) + "."
+            }
+        else:
+            return {
+                "type": "warning",
+                "title": "Basic footer",
+                "description": f"The footer is minimal and missing important elements like " + ", ".join(["contact information", "privacy policy", "terms of service"][:(3 - len(present_elements))]) + "."
+            }
+    
+    def _calculate_score(self, findings):
+        """Calculate overall design score based on findings"""
+        
+        # Define weights for different categories
+        weights = {
+            "Layout": 0.2,
+            "Visual Design": 0.25,
+            "Navigation": 0.25,
+            "Mobile": 0.2,
+            "Branding": 0.1
+        }
+        
+        # Calculate scores for each category
+        category_scores = {}
+        
+        for category, items in findings.items():
+            if not items:
+                category_scores[category] = 50  # Default score for empty categories
+                continue
+                
+            # Count types
+            type_counts = {"success": 0, "warning": 0, "error": 0}
+            for item in items:
+                if "type" in item:
+                    type_counts[item["type"]] += 1
+            
+            # Calculate category score
+            total_items = sum(type_counts.values())
+            if total_items == 0:
+                category_scores[category] = 50
+            else:
+                # Success: 100 points, Warning: 50 points, Error: 0 points
+                category_score = (type_counts["success"] * 100 + type_counts["warning"] * 50) / total_items
+                category_scores[category] = category_score
+        
+        # Calculate weighted total score
+        total_weight = sum(weights.get(category, 0) for category in category_scores.keys())
+        if total_weight == 0:
+            return 50  # Default score
+            
+        weighted_sum = sum(
+            category_scores[category] * weights.get(category, 0) 
+            for category in category_scores.keys()
+        )
+        
+        return round(weighted_sum / total_weight)
+    
+    def _generate_recommendations(self, findings):
+        """Generate prioritized recommendations based on findings"""
+        recommendations = []
+        
+        # Process all error findings first (high priority)
+        for category, items in findings.items():
+            for item in items:
+                if item.get("type") == "error":
+                    recommendations.append({
+                        "priority": "High",
+                        "category": category,
+                        "title": item.get("title", "Fix issue"),
+                        "description": self._generate_recommendation_text(category, item)
+                    })
+        
+        # Process warning findings (medium priority)
+        for category, items in findings.items():
+            for item in items:
+                if item.get("type") == "warning":
+                    recommendations.append({
+                        "priority": "Medium",
+                        "category": category,
+                        "title": item.get("title", "Improve aspect"),
+                        "description": self._generate_recommendation_text(category, item)
+                    })
+        
+        # Limit to top 5 recommendations
+        return sorted(recommendations, key=lambda x: {"High": 0, "Medium": 1, "Low": 2}[x["priority"]])[:5]
+    
+    def _generate_recommendation_text(self, category, finding):
+        """Generate specific recommendation text based on the finding"""
+        title = finding.get("title", "").lower()
+        
+        if "not mobile-friendly" in title:
+            return "Add a viewport meta tag with content='width=device-width, initial-scale=1' to enable proper responsive behavior on mobile devices."
+        
+        elif "poor page structure" in title:
+            return "Implement a clear page structure with header, main content, and footer sections using semantic HTML5 elements."
+        
+        elif "limited content structure" in title:
+            return "Divide content into clear sections using semantic elements like <section>, <article>, and <aside> to improve scanability."
+        
+        elif "many fixed-width elements" in title:
+            return "Replace fixed pixel widths with responsive units like percentages, rem, or em, and use CSS media queries for responsive layouts."
+        
+        elif "navigation not clearly defined" in title:
+            return "Create a clear navigation element using the <nav> tag and organize links logically with proper hierarchy."
+        
+        elif "too many navigation items" in title:
+            return "Simplify navigation by grouping related items into dropdown menus or moving less important links to the footer."
+        
+        elif "typography issues detected" in title:
+            return "Improve typography by limiting fonts to 2-3 families, ensuring text is at least 16px, and setting line height to 1.5-1.6 for better readability."
+        
+        elif "inconsistent color usage" in title:
+            return "Create a consistent color palette with 2-3 primary colors, 2-3 secondary colors, and appropriate accent colors for better visual harmony."
+        
+        elif "inconsistent spacing" in title:
+            return "Implement a consistent spacing system using a base unit (like 8px or 1rem) and multiples of that unit for all margins and padding."
+        
+        elif "poor image accessibility" in title:
+            return "Add descriptive alt text to all images to improve accessibility and SEO. Use empty alt text (alt=\"\") for decorative images."
+        
+        elif "no clear call-to-actions" in title or "basic call-to-actions" in title:
+            return "Add prominent call-to-action buttons with clear hierarchy, using color contrast and positioning to guide users toward important actions."
+        
+        elif "branding issues" in title or "limited branding" in title:
+            return "Strengthen branding with a prominent logo, favicon, consistent color scheme, and typography that reflects your brand identity."
+        
+        elif "no footer found" in title or "basic footer" in title:
+            return "Implement a comprehensive footer with contact information, legal links (privacy policy, terms), social media links, and copyright notice."
+        
+        # Generic recommendations based on finding type
+        if finding.get("type") == "error":
+            return finding.get("description", "Fix this critical design issue to improve user experience.")
+        else:
+            return finding.get("description", "Address this design issue to enhance visual appeal and usability.")
