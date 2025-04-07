@@ -59,16 +59,17 @@ class AIAnalyzer:
         }
         
         payload = {
-    "model": "meta-llama-3-8b-instruct",
-    "prompt": prompt,
-    "max_tokens": 50,
-    "temperature": 0.7,
-}
+            "model": "meta-llama-3-8b-instruct",
+            "prompt": prompt,
+            "max_tokens": 1024,  # Increased to get more comprehensive response
+            "temperature": 0.7,
+        }
         
         response = requests.post(
             "https://api.together.xyz/v1/completions",
             headers=headers,
-            json=payload
+            json=payload,
+            timeout=60  # Added timeout to prevent hanging requests
         )
         
         if response.status_code != 200:
@@ -587,43 +588,51 @@ Format your response as a valid JSON object that can be parsed. Do not include a
                     priority = "High" if item["type"] == "error" else "Medium"
                     
                     # Generate recommendation based on finding title
-                    if "title" in item.lower():
+                    # Get the title and ensure it's a string
+                    title = item.get("title", "")
+                    if isinstance(title, dict):
+                        title = str(title)
+                    
+                    # Convert to lowercase for comparison
+                    title_lower = title.lower()
+                    
+                    if "title" in title_lower:
                         recommendations.append({
                             "priority": priority,
                             "title": "Optimize page title",
                             "description": "Create a descriptive title between 50-60 characters that includes your primary keyword."
                         })
-                    elif "meta description" in item["title"].lower():
+                    elif "meta description" in title_lower:
                         recommendations.append({
                             "priority": priority,
                             "title": "Improve meta description",
                             "description": "Write a compelling meta description between 150-160 characters that summarizes the page content and includes a call to action."
                         })
-                    elif "heading" in item["title"].lower() and "h1" in item["title"].lower():
+                    elif "heading" in title_lower and "h1" in title_lower:
                         recommendations.append({
                             "priority": priority,
                             "title": "Fix H1 heading",
                             "description": "Ensure the page has exactly one H1 heading that clearly describes the main topic and includes your primary keyword."
                         })
-                    elif "alt text" in item["title"].lower():
+                    elif "alt text" in title_lower:
                         recommendations.append({
                             "priority": priority,
                             "title": "Add alt text to images",
                             "description": "Add descriptive alt text to all images, describing their content and incorporating relevant keywords where appropriate."
                         })
-                    elif "content volume" in item["title"].lower():
+                    elif "content volume" in title_lower:
                         recommendations.append({
                             "priority": priority,
                             "title": "Increase content volume",
                             "description": "Add more high-quality, relevant content to reach at least 500-700 words, focusing on providing value to users."
                         })
-                    elif "sentence" in item["title"].lower():
+                    elif "sentence" in title_lower:
                         recommendations.append({
                             "priority": priority,
                             "title": "Improve readability",
                             "description": "Aim for a mix of sentence lengths, with an average of 15-20 words per sentence. Break up complex sentences and use active voice."
                         })
-                    elif "viewport" in item["title"].lower():
+                    elif "viewport" in title_lower:
                         recommendations.append({
                             "priority": priority,
                             "title": "Add viewport meta tag",
