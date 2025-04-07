@@ -15,6 +15,7 @@ from analyzers.content_analyzer import ContentAnalyzer
 from analyzers.accessibility_analyzer import AccessibilityAnalyzer
 from analyzers.security_analyzer import SecurityAnalyzer
 from analyzers.design_analyzer import DesignAnalyzer
+from analyzers.ai_analysis import AIAnalyzer  # Import the new AI analyzer
 
 # Import utils
 from utils.scraper import WebScraper
@@ -55,8 +56,14 @@ def main():
         # API Keys section
         st.subheader("API Configuration (Optional)")
         with st.expander("Configure API Keys"):
-            together_api_key = st.text_input("Together.ai API Key:", type="password")
-            pagespeed_api_key = st.text_input("Google PageSpeed API Key:", type="password")
+            st.markdown("""
+            **Together.ai API Key**: Enables AI-powered content analysis and personalized recommendations.
+            **Google PageSpeed API Key**: Provides detailed performance metrics and optimization suggestions.
+            
+            Both API keys are optional. The tool will use basic analysis methods if keys are not provided.
+            """)
+            together_api_key = st.text_input("Together.ai API Key:", type="password", help="Enables AI-powered recommendations")
+            pagespeed_api_key = st.text_input("Google PageSpeed API Key:", type="password", help="Enhances performance analysis")
             
         # Run analysis button
         analyze_button = st.button("Analyze Website", type="primary")
@@ -144,15 +151,20 @@ def run_analysis(url, analyze_seo, analyze_performance, analyze_content,
         if analyze_seo:
             analyzers_to_run.append(("SEO", SEOAnalyzer(page_content, url)))
         if analyze_performance:
+            # Use the updated PerformanceAnalyzer with PageSpeed API support
             analyzers_to_run.append(("Performance", PerformanceAnalyzer(url, api_key=pagespeed_api_key)))
         if analyze_content:
-            analyzers_to_run.append(("Content", ContentAnalyzer(page_content, together_api_key=together_api_key)))
+            analyzers_to_run.append(("Content", ContentAnalyzer(page_content)))
         if analyze_accessibility:
             analyzers_to_run.append(("Accessibility", AccessibilityAnalyzer(page_content)))
         if analyze_security:
             analyzers_to_run.append(("Security", SecurityAnalyzer(url)))
         if analyze_design:
             analyzers_to_run.append(("Design & UX", DesignAnalyzer(page_content, url)))
+        
+        # Add AI analyzer if AI suggestions are enabled
+        if ai_suggestions:
+            analyzers_to_run.append(("AI Insights", AIAnalyzer(page_content, url, together_api_key=together_api_key)))
         
         # Run each analyzer
         progress_increment = 80 / len(analyzers_to_run) if analyzers_to_run else 0
@@ -212,6 +224,11 @@ def display_results(url, results, report):
         with tabs[i]:
             # Display category score
             st.subheader(f"{category} Score: {results[category]['score']}/100")
+            
+            # Special handling for AI Insights if available
+            if category == "AI Insights" and "summary" in results[category]:
+                st.markdown("### AI Summary")
+                st.markdown(results[category].get("summary", ""))
             
             # Display findings
             st.markdown("### Key Findings")
@@ -282,8 +299,17 @@ def calculate_overall_score(results):
         "Content": 0.2,
         "Accessibility": 0.15,
         "Security": 0.15,
-        "Design & UX": 0.1
+        "Design & UX": 0.1,
+        "AI Insights": 0.0  # Initially zero weight
     }
+    
+    # If AI Insights are available, redistribute weights
+    if "AI Insights" in results:
+        weights["AI Insights"] = 0.1
+        # Adjust other weights proportionally
+        for key in weights:
+            if key != "AI Insights":
+                weights[key] = weights[key] * 0.9
     
     # Calculate weighted average
     total_weight = sum(weights.get(category, 0) for category in results.keys())
