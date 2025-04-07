@@ -578,68 +578,68 @@ Format your response as a valid JSON object that can be parsed. Do not include a
         return max(0, min(100, score))
     
     def _generate_recommendations(self, findings):
-    """Generate recommendations based on findings"""
-    recommendations = []
+        """Generate recommendations based on findings"""
+        recommendations = []
         
-       # Process findings to generate recommendations
-    for category, items in findings.items():
-        for item in items:
-            # Check if item has the expected type field and if it's an error or warning
-            item_type = item.get("type")
-            if item_type in ["error", "warning"]:
-                priority = "High" if item_type == "error" else "Medium"
-                
-                # Get the title as a string for comparison
-                title = item.get("title", "")
-                if not isinstance(title, str):
-                    title = str(title) if title is not None else ""
-                
-                title_lower = title.lower()  # Now we can safely call lower()
-                
-                # Generate specific recommendations based on the issue
-                if "title" in title_lower:
-                    recommendations.append({
-                        "priority": priority,
-                        "title": "Optimize page title",
-                        "description": "Create a descriptive title between 50-60 characters that includes your primary keyword."
-                    })
-                elif "meta description" in title_lower:
-                    recommendations.append({
-                        "priority": priority,
-                        "title": "Improve meta description",
-                        "description": "Write a compelling meta description between 150-160 characters that summarizes the page content and includes a call to action."
-                    })
-                elif "heading" in title_lower and "h1" in title_lower:
-                    recommendations.append({
-                        "priority": priority,
-                        "title": "Fix H1 heading",
-                        "description": "Ensure the page has exactly one H1 heading that clearly describes the main topic and includes your primary keyword."
-                    })
-                elif "alt text" in title_lower:
-                    recommendations.append({
-                        "priority": priority,
-                        "title": "Add alt text to images",
-                        "description": "Add descriptive alt text to all images, describing their content and incorporating relevant keywords where appropriate."
-                    })
-                elif "content volume" in title_lower:
-                    recommendations.append({
-                        "priority": priority,
-                        "title": "Increase content volume",
-                        "description": "Add more high-quality, relevant content to reach at least 500-700 words, focusing on providing value to users."
-                    })
-                elif "sentence" in title_lower:
-                    recommendations.append({
-                        "priority": priority,
-                        "title": "Improve readability",
-                        "description": "Aim for a mix of sentence lengths, with an average of 15-20 words per sentence. Break up complex sentences and use active voice."
-                    })
-                elif "viewport" in title_lower:
-                    recommendations.append({
-                        "priority": priority,
-                        "title": "Add viewport meta tag",
-                        "description": "Add <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"> to the head section for better mobile responsiveness."
-                    })
-        
+        # Process findings to generate recommendations
+        for category, items in findings.items():
+            for item in items:
+                # Check if item has the expected type field and if it's an error or warning
+                item_type = item.get("type")
+                if item_type in ["error", "warning"]:
+                    priority = "High" if item_type == "error" else "Medium"
+                    
+                    # Get the title as a string for comparison
+                    title = item.get("title", "")
+                    if not isinstance(title, str):
+                        title = str(title) if title is not None else ""
+                    
+                    title_lower = title.lower()  # Now we can safely call lower()
+                    
+                    # Generate specific recommendations based on the issue
+                    if "title" in title_lower:
+                        recommendations.append({
+                            "priority": priority,
+                            "title": "Optimize page title",
+                            "description": "Create a descriptive title between 50-60 characters that includes your primary keyword."
+                        })
+                    elif "meta description" in title_lower:
+                        recommendations.append({
+                            "priority": priority,
+                            "title": "Improve meta description",
+                            "description": "Write a compelling meta description between 150-160 characters that summarizes the page content and includes a call to action."
+                        })
+                    elif "heading" in title_lower and "h1" in title_lower:
+                        recommendations.append({
+                            "priority": priority,
+                            "title": "Fix H1 heading",
+                            "description": "Ensure the page has exactly one H1 heading that clearly describes the main topic and includes your primary keyword."
+                        })
+                    elif "alt text" in title_lower:
+                        recommendations.append({
+                            "priority": priority,
+                            "title": "Add alt text to images",
+                            "description": "Add descriptive alt text to all images, describing their content and incorporating relevant keywords where appropriate."
+                        })
+                    elif "content volume" in title_lower:
+                        recommendations.append({
+                            "priority": priority,
+                            "title": "Increase content volume",
+                            "description": "Add more high-quality, relevant content to reach at least 500-700 words, focusing on providing value to users."
+                        })
+                    elif "sentence" in title_lower:
+                        recommendations.append({
+                            "priority": priority,
+                            "title": "Improve readability",
+                            "description": "Aim for a mix of sentence lengths, with an average of 15-20 words per sentence. Break up complex sentences and use active voice."
+                        })
+                    elif "viewport" in title_lower:
+                        recommendations.append({
+                            "priority": priority,
+                            "title": "Add viewport meta tag",
+                            "description": "Add <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"> to the head section for better mobile responsiveness."
+                        })
+            
         # Deduplicate recommendations
         unique_recs = []
         titles_added = set()
