@@ -187,28 +187,45 @@ class ReportGenerator:
             Format the response in Markdown with appropriate headers and emphasis.
             """
             
-            # Call Together.ai API
-            response = requests.post(
-                "https://api.together.xyz/v1/completions",
-                headers={
-                    "Authorization": f"Bearer {self.together_api_key}",
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "model": "mistralai/Mixtral-8x7B-Instruct-v0.1",  # More available model
-                    "prompt": prompt,
-                    "max_tokens": 800,
-                    "temperature": 0.3
-                }
-            )
+            # Log that we're making an API call
+            logger.info("Making API call to Together.ai for AI summary generation")
             
-            if response.status_code == 200:
-                ai_text = response.json().get("choices", [{}])[0].get("text", "")
-                if ai_text:
-                    return ai_text
+            # Call Together.ai API with improved error handling
+            try:
+                response = requests.post(
+                    "https://api.together.xyz/v1/completions",
+                    headers={
+                        "Authorization": f"Bearer {self.together_api_key}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "model": "meta-llama-3-70b-instruct-turbo-free",
+                        "prompt": prompt,
+                        "max_tokens": 800,
+                        "temperature": 0.3
+                    },
+                    timeout=60  # Increase timeout to 60 seconds
+                )
+                
+                # Log the API response status code
+                logger.info(f"Together.ai API response status code: {response.status_code}")
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    ai_text = result.get("choices", [{}])[0].get("text", "")
+                    if ai_text:
+                        logger.info("Successfully generated AI summary")
+                        return ai_text
+                    else:
+                        logger.warning("API returned 200 but no text in the response")
+                else:
+                    # Log the error response
+                    logger.error(f"API error: {response.text}")
+            except requests.exceptions.RequestException as e:
+                logger.error(f"Request exception during API call: {str(e)}")
             
             # Fallback to standard summary if API call fails
-            logger.warning(f"AI summary generation failed: {response.status_code}")
+            logger.warning("Falling back to standard summary generation")
             return self._generate_standard_summary(overall_scores, avg_score, errors, warnings, successes)
             
         except Exception as e:
