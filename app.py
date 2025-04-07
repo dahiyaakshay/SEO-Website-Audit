@@ -22,7 +22,7 @@ from utils.report_generator import ReportGenerator
 
 # Set page configuration
 st.set_page_config(
-    page_title="Website Analyzer - Web Gremlin Alternative",
+    page_title="Website Analyzer",
     page_icon="🔍",
     layout="wide",
     initial_sidebar_state="expanded"
