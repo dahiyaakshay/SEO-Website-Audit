@@ -41,6 +41,22 @@ class ReportGenerator:
         # Extract top recommendations
         top_recommendations = self._extract_top_recommendations()
         
+        # Prioritize AI recommendations if available
+        if self.ai_enabled and "AI Insights" in self.results:
+            ai_recommendations = self.results["AI Insights"].get("recommendations", [])
+            if ai_recommendations:
+                # Combine AI recommendations with other high priority recommendations
+                ai_recs = [{"category": "AI Insights", "priority": rec["priority"], 
+                            "title": rec["title"],
+                            "recommendation": rec["description"]} 
+                           for rec in ai_recommendations if rec["priority"] == "High"]
+                
+                other_top_recs = [rec for rec in top_recommendations if rec["category"] != "AI Insights"]
+                
+                # Ensure we have a good mix of AI and standard recommendations
+                combined_recs = ai_recs[:3] + other_top_recs[:2]
+                top_recommendations = combined_recs
+        
         report = {
             "summary": summary,
             "top_recommendations": top_recommendations,
@@ -56,6 +72,12 @@ class ReportGenerator:
     
     def _generate_summary(self):
         """Generate a summary of the analysis results"""
+        # If AI Insights has its own summary, use that instead
+        if self.ai_enabled and "AI Insights" in self.results:
+            ai_summary = self.results["AI Insights"].get("summary", None)
+            if ai_summary:
+                return ai_summary
+        
         # Calculate overall scores
         overall_scores = {}
         for category, data in self.results.items():
@@ -131,13 +153,17 @@ class ReportGenerator:
     def _generate_ai_summary(self, overall_scores, avg_score, errors, warnings, successes):
         """Generate an AI-enhanced summary using Together.ai"""
         try:
+            # Extract key findings from each category for better AI context
+            key_findings = self._extract_key_findings_for_ai()
+            
             # Prepare data for AI
             context = {
                 "overall_score": f"{avg_score:.0f}",
                 "category_scores": overall_scores,
                 "errors": errors,
                 "warnings": warnings,
-                "successes": successes
+                "successes": successes,
+                "key_findings": key_findings
             }
             
             # Best and worst categories
@@ -169,7 +195,7 @@ class ReportGenerator:
                     "Content-Type": "application/json"
                 },
                 json={
-                    "model": "llama-3-70b-instruct",  # Or other appropriate model
+                    "model": "mistralai/Mixtral-8x7B-Instruct-v0.1",  # More available model
                     "prompt": prompt,
                     "max_tokens": 800,
                     "temperature": 0.3
@@ -188,6 +214,30 @@ class ReportGenerator:
         except Exception as e:
             logger.error(f"Error generating AI summary: {str(e)}")
             return self._generate_standard_summary(overall_scores, avg_score, errors, warnings, successes)
+    
+    def _extract_key_findings_for_ai(self):
+        """Extract important findings to include in AI context"""
+        key_findings = []
+        
+        for category, data in self.results.items():
+            findings = data.get("findings", {})
+            for section, items in findings.items():
+                for item in items:
+                    if item.get("type") in ["error", "warning"]:
+                        key_findings.append({
+                            "category": category,
+                            "section": section,
+                            "type": item.get("type"),
+                            "title": item.get("title"),
+                            "description": item.get("description")
+                        })
+                        
+                        # Limit to most important findings to avoid token limits
+                        if len(key_findings) >= 15:
+                            break
+        
+        # Sort by importance (errors first)
+        return sorted(key_findings, key=lambda x: 0 if x["type"] == "error" else 1)
     
     def _extract_top_recommendations(self):
         """Extract and prioritize top recommendations from all categories"""
