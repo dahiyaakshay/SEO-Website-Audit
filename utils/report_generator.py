@@ -199,7 +199,7 @@ class ReportGenerator:
                         "Content-Type": "application/json"
                     },
                     json={
-                        "model": "meta-llama-3-70b-instruct-turbo-free",
+                        "model": "meta-llama-3-8b-instruct",
                         "prompt": prompt,
                         "max_tokens": 800,
                         "temperature": 0.3
