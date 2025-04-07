@@ -59,12 +59,12 @@ class AIAnalyzer:
         }
         
         payload = {
-            "model": "mistralai/Mixtral-8x7B-Instruct-v0.1",  # Good balance of quality and cost
-            "prompt": prompt,
-            "max_tokens": 1024,
-            "temperature": 0.2,  # Lower temperature for more consistent results
-            "top_p": 0.7
-        }
+    "model": "meta-llama-3-70b-instruct-turbo-free",
+    "prompt": prompt,
+    "max_tokens": 1024,
+    "temperature": 0.2,
+    "top_p": 0.7
+}
         
         response = requests.post(
             "https://api.together.xyz/v1/completions",
