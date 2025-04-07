@@ -791,48 +791,163 @@ class AccessibilityAnalyzer:
             "description": f"All {len(data_tables)} data tables have proper headers, but {len(tables_without_captions)} are missing captions."
         }
     
-def calculate_accessibility_score(self, findings):
-    """Calculate overall accessibility score based on findings"""
-    
-    # Define weights for different categories
-    weights = {
-        "Structure": 0.25,
-        "Content": 0.25,
-        "Navigation": 0.25,
-        "Media": 0.25
-    }
-    
-    # Calculate scores for each category
-    category_scores = {}
-    
-    for category, items in findings.items():
-        if not items:
-            category_scores[category] = 50  # Default score for empty categories
-            continue
+    def _generate_recommendations(self, findings):
+        """Generate accessibility recommendations based on findings"""
+        recommendations = []
+        
+        # Process findings to generate recommendations
+        for category, items in findings.items():
+            for item in items:
+                if item["type"] == "error" or item["type"] == "warning":
+                    priority = "High" if item["type"] == "error" else "Medium"
+                    title = item["title"]
+                    
+                    # Generate specific recommendations based on the issue
+                    if "language attribute" in title.lower():
+                        recommendations.append({
+                            "priority": priority,
+                            "title": "Add language attribute",
+                            "description": "Add a lang attribute to the HTML tag (e.g., lang=\"en\" for English).",
+                            "example": "<html lang=\"en\">"
+                        })
+                    elif "page title" in title.lower():
+                        recommendations.append({
+                            "priority": priority,
+                            "title": "Improve page title",
+                            "description": "Add a descriptive title tag that clearly identifies the page content."
+                        })
+                    elif "headings" in title.lower():
+                        recommendations.append({
+                            "priority": priority,
+                            "title": "Fix heading structure",
+                            "description": "Use headings (h1-h6) in a logical hierarchical order. Start with one h1, followed by h2s, and so on without skipping levels."
+                        })
+                    elif "landmarks" in title.lower():
+                        recommendations.append({
+                            "priority": priority,
+                            "title": "Add semantic landmark elements",
+                            "description": "Use HTML5 semantic elements (header, nav, main, footer) or ARIA landmark roles to structure your page."
+                        })
+                    elif "alt text" in title.lower():
+                        recommendations.append({
+                            "priority": priority,
+                            "title": "Add alt text to images",
+                            "description": "Add descriptive alt text to informative images. Use empty alt attributes (alt=\"\") for decorative images.",
+                            "example": "<img src=\"example.jpg\" alt=\"Description of the image\">"
+                        })
+                    elif "contrast" in title.lower():
+                        recommendations.append({
+                            "priority": "Medium",
+                            "title": "Improve color contrast",
+                            "description": "Ensure text has sufficient contrast with its background. Use contrast ratio of at least 4.5:1 for normal text and 3:1 for large text."
+                        })
+                    elif "text size" in title.lower():
+                        recommendations.append({
+                            "priority": "Medium",
+                            "title": "Use accessible text sizes",
+                            "description": "Ensure text is at least 12px in size and consider using relative units (em, rem) instead of fixed pixels."
+                        })
+                    elif "form controls" in title.lower() and "unlabeled" in title.lower():
+                        recommendations.append({
+                            "priority": priority,
+                            "title": "Label form controls",
+                            "description": "Associate labels with form controls using the 'for' attribute matching the input's 'id', or by nesting inputs inside label elements.",
+                            "example": "<label for=\"username\">Username:</label>\n<input id=\"username\" type=\"text\">"
+                        })
+                    elif "non-descriptive links" in title.lower():
+                        recommendations.append({
+                            "priority": priority,
+                            "title": "Use descriptive link text",
+                            "description": "Replace generic link text like 'click here' or 'read more' with text that describes the link's destination.",
+                            "example": "Bad: <a href=\"policy.html\">Click here</a>\nGood: <a href=\"policy.html\">View our privacy policy</a>"
+                        })
+                    elif "keyboard" in title.lower():
+                        recommendations.append({
+                            "priority": "Medium",
+                            "title": "Improve keyboard accessibility",
+                            "description": "Ensure all interactive elements are keyboard accessible. Avoid using positive tabindex values and add keyboard event handlers to interactive elements."
+                        })
+                    elif "tables" in title.lower():
+                        recommendations.append({
+                            "priority": priority,
+                            "title": "Improve table structure",
+                            "description": "Use proper table markup with th elements for headers, caption for table title, and thead/tbody to structure data tables.",
+                            "example": "<table>\n  <caption>Monthly Sales</caption>\n  <thead>\n    <tr>\n      <th>Month</th>\n      <th>Sales</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <td>January</td>\n      <td>$100</td>\n    </tr>\n  </tbody>\n</table>"
+                        })
+        
+        # Add general recommendations if few specific ones were generated
+        if len(recommendations) < 3:
+            general_recommendations = [
+                {
+                    "priority": "Medium",
+                    "title": "Test with screen readers",
+                    "description": "Use screen readers like NVDA, JAWS, or VoiceOver to test your site's accessibility."
+                },
+                {
+                    "priority": "Medium",
+                    "title": "Implement skip links",
+                    "description": "Add a 'Skip to main content' link at the beginning of the page to help keyboard users bypass repetitive navigation.",
+                    "example": "<a href=\"#main-content\" class=\"skip-link\">Skip to main content</a>"
+                },
+                {
+                    "priority": "Medium",
+                    "title": "Ensure sufficient color contrast",
+                    "description": "Use tools like the WebAIM Contrast Checker to verify your site's color contrast meets WCAG standards."
+                }
+            ]
             
-        # Count types
-        type_counts = {"success": 0, "warning": 0, "error": 0}
-        for item in items:
-            if "type" in item:
-                type_counts[item["type"]] += 1
+            for rec in general_recommendations:
+                if not any(r["title"] == rec["title"] for r in recommendations):
+                    recommendations.append(rec)
         
-        # Calculate category score
-        total_items = sum(type_counts.values())
-        if total_items == 0:
-            category_scores[category] = 50
-        else:
-            # Success: 100 points, Warning: 50 points, Error: 0 points
-            category_score = (type_counts["success"] * 100 + type_counts["warning"] * 50) / total_items
-            category_scores[category] = category_score
-    
-    # Calculate weighted total score
-    total_weight = sum(weights.get(category, 0) for category in category_scores.keys())
-    if total_weight == 0:
-        return 50  # Default score
+        # Sort recommendations by priority
+        priority_order = {"High": 0, "Medium": 1, "Low": 2}
+        recommendations.sort(key=lambda x: priority_order.get(x["priority"], 3))
         
-    weighted_sum = sum(
-        category_scores[category] * weights.get(category, 0) 
-        for category in category_scores.keys()
-    )
-    
-    return round(weighted_sum / total_weight)
+        return recommendations[:10]  # Limit to top 10 recommendations
+        
+    def calculate_accessibility_score(self, findings):
+        """Calculate overall accessibility score based on findings"""
+        
+        # Define weights for different categories
+        weights = {
+            "Structure": 0.25,
+            "Content": 0.25,
+            "Navigation": 0.25,
+            "Media": 0.25
+        }
+        
+        # Calculate scores for each category
+        category_scores = {}
+        
+        for category, items in findings.items():
+            if not items:
+                category_scores[category] = 50  # Default score for empty categories
+                continue
+                
+            # Count types
+            type_counts = {"success": 0, "warning": 0, "error": 0}
+            for item in items:
+                if "type" in item:
+                    type_counts[item["type"]] += 1
+            
+            # Calculate category score
+            total_items = sum(type_counts.values())
+            if total_items == 0:
+                category_scores[category] = 50
+            else:
+                # Success: 100 points, Warning: 50 points, Error: 0 points
+                category_score = (type_counts["success"] * 100 + type_counts["warning"] * 50) / total_items
+                category_scores[category] = category_score
+        
+        # Calculate weighted total score
+        total_weight = sum(weights.get(category, 0) for category in category_scores.keys())
+        if total_weight == 0:
+            return 50  # Default score
+            
+        weighted_sum = sum(
+            category_scores[category] * weights.get(category, 0) 
+            for category in category_scores.keys()
+        )
+        
+        return round(weighted_sum / total_weight)
