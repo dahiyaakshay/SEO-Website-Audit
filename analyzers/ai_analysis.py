@@ -59,11 +59,10 @@ class AIAnalyzer:
         }
         
         payload = {
-    "model": "meta-llama-3-70b-instruct-turbo-free",
+    "model": "meta-llama-3-8b-instruct",
     "prompt": prompt,
-    "max_tokens": 1024,
-    "temperature": 0.2,
-    "top_p": 0.7
+    "max_tokens": 50,
+    "temperature": 0.7,
 }
         
         response = requests.post(
