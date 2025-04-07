@@ -190,6 +190,10 @@ def run_analysis(url, analyze_seo, analyze_performance, analyze_content,
         
     except Exception as e:
         st.error(f"An error occurred during analysis: {str(e)}")
+        # Display a more detailed error message for debugging
+        import traceback
+        st.text("Detailed error information:")
+        st.code(traceback.format_exc())
         st.info("Please check the URL and try again, or report this issue.")
     finally:
         # Clean up progress indicators
@@ -222,21 +226,24 @@ def display_results(url, results, report):
     # Fill each tab with its respective analysis results
     for i, category in enumerate(results.keys()):
         with tabs[i]:
-            # Display category score
-            st.subheader(f"{category} Score: {results[category]['score']}/100")
-            
-            # Special handling for AI Insights if available
-            if category == "AI Insights" and "summary" in results[category]:
-                st.markdown("### AI Summary")
-                st.markdown(results[category].get("summary", ""))
-            
-            # Display findings
-            st.markdown("### Key Findings")
-            display_findings(results[category]['findings'])
-            
-            # Display recommendations
-            st.markdown("### Recommendations")
-            display_recommendations(results[category]['recommendations'])
+            try:
+                # Display category score
+                st.subheader(f"{category} Score: {results[category]['score']}/100")
+                
+                # Special handling for AI Insights if available
+                if category == "AI Insights" and "summary" in results[category]:
+                    st.markdown("### AI Summary")
+                    st.markdown(results[category].get("summary", ""))
+                
+                # Display findings
+                st.markdown("### Key Findings")
+                display_findings(results[category]['findings'])
+                
+                # Display recommendations
+                st.markdown("### Recommendations")
+                display_recommendations(results[category]['recommendations'])
+            except Exception as e:
+                st.error(f"Error displaying {category} results: {str(e)}")
     
     # Summary tab
     with tabs[-1]:
@@ -246,7 +253,10 @@ def display_results(url, results, report):
         # Display top recommendations
         st.markdown("### Top Priority Recommendations")
         for rec in report['top_recommendations']:
-            st.markdown(f"- **{rec['category']}**: {rec['recommendation']}")
+            try:
+                st.markdown(f"- **{rec['category']}**: {rec['recommendation']}")
+            except Exception as e:
+                st.error(f"Error displaying recommendation: {str(e)}")
         
         # Download detailed report
         if 'detailed_report' in report:
@@ -264,28 +274,73 @@ def display_findings(findings):
     for category, items in findings.items():
         with st.expander(f"{category} ({len(items)} items)"):
             for item in items:
-                if item['type'] == 'success':
-                    st.markdown(f"✅ **{item['title']}**")
-                elif item['type'] == 'warning':
-                    st.markdown(f"⚠️ **{item['title']}**")
-                elif item['type'] == 'error':
-                    st.markdown(f"❌ **{item['title']}**")
-                
-                st.markdown(f"{item['description']}")
-                if 'details' in item and item['details']:
-                    st.code(item['details'])
-                st.markdown("---")
+                try:
+                    # Ensure item['type'] is a string
+                    item_type = item.get('type', '')
+                    if isinstance(item_type, dict):
+                        # If it's a dictionary, use a default type
+                        item_type = 'warning'
+                    elif not isinstance(item_type, str):
+                        # Convert to string if it's another non-string type
+                        item_type = str(item_type)
+                    
+                    if item_type == 'success':
+                        st.markdown(f"✅ **{item['title']}**")
+                    elif item_type == 'warning':
+                        st.markdown(f"⚠️ **{item['title']}**")
+                    elif item_type == 'error':
+                        st.markdown(f"❌ **{item['title']}**")
+                    else:
+                        # Default case for unknown types
+                        st.markdown(f"ℹ️ **{item['title']}**")
+                    
+                    st.markdown(f"{item['description']}")
+                    if 'details' in item and item['details']:
+                        st.code(item['details'])
+                    st.markdown("---")
+                except Exception as e:
+                    st.error(f"Error displaying finding: {str(e)}")
+                    st.markdown("---")
 
 def display_recommendations(recommendations):
     """Display recommendations with priority levels"""
-    for priority in ['High', 'Medium', 'Low']:
-        priority_recs = [r for r in recommendations if r['priority'] == priority]
-        if priority_recs:
-            st.markdown(f"#### {priority} Priority")
-            for rec in priority_recs:
-                st.markdown(f"- **{rec['title']}**: {rec['description']}")
-                if 'example' in rec:
-                    st.code(rec['example'])
+    try:
+        for priority in ['High', 'Medium', 'Low']:
+            # Add type checking for the priority field
+            priority_recs = []
+            for r in recommendations:
+                rec_priority = r.get('priority', '')
+                # Handle if priority is not a string
+                if isinstance(rec_priority, dict):
+                    rec_priority = 'Medium'  # Default if it's a dictionary
+                elif not isinstance(rec_priority, str):
+                    rec_priority = str(rec_priority)
+                
+                if rec_priority == priority:
+                    priority_recs.append(r)
+            
+            if priority_recs:
+                st.markdown(f"#### {priority} Priority")
+                for rec in priority_recs:
+                    try:
+                        title = rec.get('title', 'Recommendation')
+                        description = rec.get('description', '')
+                        
+                        if isinstance(description, dict):
+                            # If description is a dictionary, try to extract useful information
+                            description = str(description)
+                        
+                        st.markdown(f"- **{title}**: {description}")
+                        
+                        if 'example' in rec and rec['example']:
+                            if isinstance(rec['example'], dict):
+                                st.code(str(rec['example']))
+                            else:
+                                st.code(rec['example'])
+                    except Exception as e:
+                        st.error(f"Error displaying recommendation: {str(e)}")
+    except Exception as e:
+        st.error(f"Error in recommendations display: {str(e)}")
 
 def calculate_overall_score(results):
     """Calculate the overall score based on individual category scores"""
